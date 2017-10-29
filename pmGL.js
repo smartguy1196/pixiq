@@ -150,13 +150,13 @@ PhotoMap.stage = ( method, source, callback ) => {
 			placeHolders.error( "PhotoMap Generic Staging ERROR: No arguments supplied" );
 			return;
 		case "URI": //Library Potential? - use placeholder function
-			placeHolders.make_URI( [ source ] );
+			modified.reference = placeHolders.make_URI( [ source ] );
 			break;
 		case "Blob":
-			break;
-		case "FileReader"
+			modified.reference = window.URL.createObjectURL( source );
 			break;
 		default:
+			placeHolders.error( "PhotoMap Generic Staging ERROR: method " + method + " is not supported" );
 			return;
 	}
 	
