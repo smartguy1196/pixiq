@@ -5,13 +5,65 @@ var placeHolders = {  //These functions are namespaced here in case they will be
 	"log" : ( log ) => { console.log( log ) },
 	"error" : ( error ) => { console.log( error ) },
 	"warn" : ( warn ) => { console.log( warn ) },
-	"make_URI" : ( placeholder_array ){} //WIP
 	
 }
 
-var PhotoMap = function( image ){
+var PhotoMap = function( img ){
 	
-	var source = { "image","type","reference" }, plot, frame, drawing;
+	if( new.target ){
+		
+		var source = { "reference", "type", "data" }, plot, frame, drawing;
+		if( img instanceof Image ){
+			
+			source.reference = img.src;
+			source.type = "URI";
+			
+			//extract data using a virtual canvas:
+		
+			var virtual = document.createElement( "canvas" );
+			virtual.width = this.width;
+			virtual.height = this.height;
+		
+			var context = virtual.getContext( "2d" );
+		
+			context.drawImage( this, 0, 0 );
+			if( img.width < 0 || img.width < 0 )
+			{
+			
+				this.source.data = context.getImageData( 0, 0, img.width , img.height );
+				this.plot = new PhotoMap.PhotoMapPlot( this.source );
+				delete virtuaal, context, img; //use this line to save resources - remove calls to the image if you turn this on
+				
+			}
+			else
+			{
+				delete virtuaal, context, img;
+				
+				//Throwing an error is the only way to prevent the object from being created
+				//object is never created at this point, because staging needs to be redone.
+				
+				try{
+				
+					throw new Error( "PhotoMap Object Auto-staging ERROR: " +
+						"provided image is either not loaded properly, or has no image data - zero pixels"
+					)
+				
+				}catch( e ){
+					
+					placeHolders.error( e.message );
+					
+				}
+				
+			}
+			
+		}
+		
+	}else{
+		
+		var forgive = new PhotoMap( img );
+		return forgive;
+		
+	}
 
 }
 
@@ -139,7 +191,7 @@ PhotoMap.stage = ( method, source, callback ) => {
 		
 	}
 	
-	var modified = { "reference", "type", "data" }
+	var modified = { "reference", "type", "data" } //data can be `undefined`, if data is undefined, plotting should not be run, but it is called as a constructor and not a method, so shouldn't matter anyway currently -- even when called as a method, the method is only a getter function currently
 	
 	//either create image in blob or with filereader, or load from URL. The set the source reference
 	//if no arguments are supplied, error out
@@ -149,8 +201,18 @@ PhotoMap.stage = ( method, source, callback ) => {
 		case undefined:
 			placeHolders.error( "PhotoMap Generic Staging ERROR: No arguments supplied" );
 			return;
-		case "URI": //Library Potential? - use placeholder function
-			modified.reference = placeHolders.make_URI( [ source ] );
+		case "URI":
+			try{
+				modified.reference = typeof source === "string" ? ( new URI( source ) ).toString() : URI.expand( source.template, source.arguments );
+			}
+			catch( e ){
+				
+				placeHolders.error( "URI: " + e.message );
+			
+			}
+			
+			//URI library will throw an exception if it errors out; This needs to be caught
+			
 			break;
 		case "Blob":
 			modified.reference = window.URL.createObjectURL( source );
@@ -176,10 +238,10 @@ PhotoMap.stage = ( method, source, callback ) => {
 			var context = virtual.getContext( "2d" );
 		
 			context.drawImage( this, 0, 0 );
-			var modifee.data = context.getImageData( 0, 0, this.width , this.height );
+			modifiee.data = context.getImageData( 0, 0, this.width , this.height );
 		
 			window.URL.revokeObjectURL( this.src );
-			this = null; //save resources.
+			this = null; //use this line to save resources - remove calls to the image if you turn this on
 			
 			if( callback instanceof Function )
 				callback( modifiee );
