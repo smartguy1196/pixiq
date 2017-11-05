@@ -9,6 +9,8 @@ Commentary: Environment support
 
 nodejs is not supported, due to lack of DOM.
 Use a "get pixel" library instead.
+
+WIP - provide a get pixel library
 */
 
 ( function ( root, factory ){
@@ -45,12 +47,14 @@ Use a "get pixel" library instead.
 			/*
 			Label: Runtime keys
 			
-			-(console control) log, error, warn 
+			-(console control) log, error, warn
+			WIP: get better console control
+			*specfically one that works well with node-like environments (at least for get-pixel library)
 			*/
 			
 			"log" : ( log ) => { console.log( log ) },
 			"error" : ( error ) => { console.log( error ) },
-			"warn" : ( warn ) => { console.log( warn ) },
+			"warn" : ( warn ) => { console.log( warn ) }
 			
 		},
 		
@@ -65,14 +69,20 @@ Use a "get pixel" library instead.
 				var source = { "src", "type", "data" }, plot, frame, drawing;
 				
 				/*
-				Commentary: Direct and delayed construction options
+				Commentary: Skeletal and frugal construction options
 				
-				To what extent te PhotoMap is fully constructed at construction depends on the `img` argument
+				To what extent the PhotoMap is fully constructed at construction depends on the presence and validity of the `img` argument
 				
-				If an image is supplied to the argument, the PhotoMap is constructed to plotting, else it is left alone.
+				The argument is valid, if an image is supplied as the argument.
+				If supplied properly, the PhotoMap is constructed immediately to plotting to conserve processing time.
+				Hence, it is named frugal construction
+				
+				If no argument is provided, PhotoMap's properties and methods are constructed only.
+				This is PhotoMap's Object-ive backbone. Hence, it is called skeletal construction
+				*skeletal doesn't have it's own section, because what it is, is a lack of a section or lack of additional processing to be specific
 				*/
 				
-				//Label: Direct construction
+				//Label: Frugal construction
 				
 				if( img instanceof Image ){
 					
@@ -83,18 +93,18 @@ Use a "get pixel" library instead.
 					
 					//Rundown: extract data using a virtual canvas:
 				
-					var virtual = document.createElement( "canvas" );
+					let virtual = document.createElement( "canvas" );
 					virtual.width = this.width;
 					virtual.height = this.height;
 				
-					var context = virtual.getContext( "2d" );
+					let context = virtual.getContext( "2d" );
 					
 					//Commentary: virtual will no longer be referenced
 					
 					context.drawImage( this, 0, 0 );
 					
 					/*
-					Commentary: images with no data to extract
+					Commentary: Images with no data to extract
 					
 					Images that do not have either a width or a height have no data to extract, so no plotting can be done.
 					However, the PhotoMap will be initiated with the private properties required for staging to be run.
@@ -114,13 +124,10 @@ Use a "get pixel" library instead.
 					
 						source.data = context.getImageData( 0, 0, img.width , img.height ); //Rundown: extract image data
 						plot = new PhotoMap.PhotoMapPlot( source ); //Rundown: extract plot
-						
-						delete virtuaal, context, img; //Commentary: use this line to conserve resources
-						
+												
 					}
 					else
 					{
-						delete virtuaal, context, img; //Commentary: use this line to conserve resources
 						
 						runtime.warn( 
 							"PhotoMap Object Auto-staging WARNING: " +
@@ -129,7 +136,7 @@ Use a "get pixel" library instead.
 						
 					}
 					
-				}
+				} //Endfor: Frugal construction
 				
 			}else{ //Endfor: PhotoMap constructor
 				
@@ -153,7 +160,7 @@ Use a "get pixel" library instead.
 	The prototype contains public methods for each step in the process of making a PhotoMap, which include:
 	
 	- staging:
-	This the process dedicated to ripping source data off of an image and supplying it to the source property of the PhotoMap object.
+	This process is dedicated to ripping source data off of an image and supplying it to the source property of the PhotoMap object.
 	*Once, staging is complete within a PhotoMap, plotting is immediately invoked. See explanation below the "prototype staging method" label
 	
 	- plotting:
@@ -171,9 +178,7 @@ Use a "get pixel" library instead.
 	
 	The pipeline factories do everything the object methods are supposed to (i.e. all those things listed above),
 	but they are exposed factories and not object methods, which means they operate on I/O rather than modifying PhotoMaps
-	*/
 	
-	/*
 	Label: prototype methods
 	
 	Label: prototype staging method
@@ -190,6 +195,8 @@ Use a "get pixel" library instead.
 	*It is important to note that this control is intended for delay, and not termination in fully constructing a PhotoMap plot.
 	If you do not wish to construct one, please use the pipeline factory instead
 	*This callback option is not available for direct construction
+	
+	WIP - consideration of adding this callback function
 	*/
 	
 	Photomap.prototype.stage = function(
@@ -204,21 +211,51 @@ Use a "get pixel" library instead.
 	
 	){
 		
+		//Label: stage validator
+		
 		switch ( 
 		
+			/*
+			Rundown: stage validator
+			
+			validates the source argument for 2 reasons:
+			-is the source stageable?
+			-does the source change anything?
+			
+			factors:
+			-presence of original source
+			-presence of new source
+			-do the sources divert?
+			
+			Outcomes:
+			
+			These are errors (not stageable):
+			-(-1): neither source is present, nothing to stage
+			-0: original source is not present. New source is present, but type argument was *not provided
+			*bad, because there is no type to cast the source
+						
+			These are proper (stageable):
+			-(+1)(will stage): Either both sources are present and divert
+			 or the new source is fully present and is the only one,
+			 so staging is possible
+			-(+2)(will not stage - it is not required): Either both sources are present and do not divert
+			 or the old source is the only one present,
+			 so there is nothing new to stage
+			
+			*case (-1) will fall down through case 0
+			*case (+2) does not stage a new source, because there is none, so it is left out
+			*/
+		
 			!this.source ?
-				source - !method :  //returns:
-										//-1 for no original source, no new source, and no new method
-										//0 for no original source, new source, but no new method
-										//1 for no original source, new source and new method
-				source ? ( source !== this.source.src && /* !method || - method will differ if method is null/undefined */ method !== this.source.type ) + 1 : 2
+				source - !type :  
+				source ? 
+					( source !== this.source.src && type !== this.source.type ) + 1 :
+					2
 			
 		){
 			
-			case -1: //error out - no original source, no new source, and no method
-			
-				//break; - case -1 and 0 do the same thing
-			case 0: //error out - no original source, there is a new source, but no method
+			case -1:
+			case 0: 
 			
 				runtime.error( 
 					"PhotoMap Object Staging ERROR: " +
@@ -227,32 +264,42 @@ Use a "get pixel" library instead.
 				)
 				return;
 
-			case 1: //create new source object - either:
-					//there is no original source, but there is a new source & method
-					//or
-					//there is an original source, and the new source & method differ
-					
+			case 1: 
+				
+				/*
+				Rundown: valid staging
+				
+				Once validated to case 1, all of the properties are reset, because a new source is provided
+				*/
+				
+				this.plot = this.frame = this.drawing = undefined;
 				
 				this.source = PhotoMap.stage(
 				
-					method ? method: this.source.type,
+					type ? type: this.source.type,
 					source,
 					callback instanceof Function ? callback( this.source ) : undefined
 				
 				);
 					
 				break;
-			//case 2: //case 2 block can be deleted and is unnecessary as it will not do anything. All successful (no error) calls to this function will return this.source
-					
-					//return original source - original source exists, but the new source & method differ or they are not provided in arguments (getter function)
-					
-				//break;
+			//case 2:
+				//Commentary: case 2 will not stage anything, so stage validator does nothing with stage 2
 			
 		}
 		
 		return this.source;
 		
 	} //Endfor: prototype staging method
+	
+	/*
+	Label: prototype plotting method
+	
+	Plotting image data is dependent on the image data being present and ready itself.
+	This means plotting is completely dependent on staging being finished.
+	This is the only prototype method that offers no pipeline control, because
+	the pipeline control should be done with the callback function used by staging after staging
+	*/
 
 	PhotoMap.prototype.plot = function(){
 		
@@ -264,21 +311,49 @@ Use a "get pixel" library instead.
 		}
 	}
 
+	/*
+	Label: prototype framing and drawing methods
+	
+	Rundown: prototype framing and drawing methods
+	
+	For the following, relevant object refers to the frame object during the framing pipeline
+	and the draw object during the drawing pipeline.
+	
+	Framing and drawing prototype methods both share identical pipelines.
+	Both can be used as getter functions, if 2 conditions are met:
+	-The argument is not used. The argument is reserved only for setting the relevant object, not retrieving it
+	--If the argument is used and it does not add any new data, then it is considered "to not be used,"
+	because there is no point in using it.
+	-The relevant object already exists. If it doesn't there will be no object to get, hence there is an error
+	
+	If the argument is used, the relevant object is set based on what was data is inside the argument
+	and the properties depenedent on the relevant object are reset
+	
+	*If there is no argument or the relevant object is not previously set, this function can't do anything,
+	because there is nothing to set and nothing to get
+	*/
+	
 	PhotoMap.prototype.frame = function( plot ){
 		
-		if( !plot && !this.frame ){
+		if( !this.frame && !plot ){ //Rundown: nothing to set and nothing to get? error out...
 			
 			runtime.error( 
 				"PhotoMap Object Framing ERROR: " +
-					"Original plot either does not exist or has not yet been framed, and the amount of arguments provided to the framing function is insufficient" +
+					"Original plot either does not exist or has not yet been framed, and the amount of arguments provided to the framing function is insufficient - nothing to set, nothing to get" +
 					"(0 arguments given--function requires 1)"
 			)
 			return;
 			
 		}
 			
-		if( plot && ( this.plot != plot || !this.frame ) )
+		if( plot && ( this.plot != plot || !this.frame ) ){
+		
+			this.drawing = undefined;
 			this.frame = new PhotoMap.PhotoMapFrame( plot );
+			this.plot = this.frame.plot ? this.frame.plot : undefined;
+			this.source = this.frame.plot.source ? this.frame.plot.source : undefined;
+		
+		}
 		
 		return this.frame;
 		
@@ -288,17 +363,23 @@ Use a "get pixel" library instead.
 		
 		if( !frame && !this.drawing ){
 			
-			runtime.error( 
+			runtime.error( //Rundown: nothing to set and nothing to get? error out...
 				"PhotoMap Object Framing ERROR: " +
-					"Original frame either does not exist or has not yet been drawn, and the amount of arguments provided to the drawing function is insufficient" +
+					"Original frame either does not exist or has not yet been drawn, and the amount of arguments provided to the drawing function is insufficient - nothing to set, nothing to get" +
 					"(0 arguments given--function requires 1)"
 			)
 			return;
 			
 		}
 			
-		if( frame && ( this.frame != frame || !this.drawing ) )
+		if( frame && ( this.frame != frame || !this.drawing ) ){
+			
 			this.drawing = new PhotoMap.PhotoMapDrawing( frame );
+			this.frame = this.drawing.frame ? this.drawing.frame : undefined;
+			this.plot = this.drawing.frame.plot ? this.drawing.frame.plot : undefined;
+			this.source = this.drawing.frame.plot.source ? this.drawing.frame.plot.source : undefined;
+		
+		}
 
 		return this.drawing;
 		
@@ -330,7 +411,9 @@ Use a "get pixel" library instead.
 					
 					//WIP
 					
-					modified.src = typeof source === "string" ? ( new URI( source ) ).toString() : URI.expand( source.template, source.arguments );
+					modified.src = typeof source === "string" ? 
+						( new URI( source ) ).toString() :
+						URI.expand( source.template, source.arguments );
 				
 				}
 				catch( e ){
