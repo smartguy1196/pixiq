@@ -270,6 +270,8 @@ WIP - provide a get pixel library
 				Rundown: valid staging
 				
 				Once validated to case 1, all of the properties are reset, because a new source is provided
+				
+				WIP - inconistency bug fix could use revision
 				*/
 				
 				this.plot = this.frame = this.drawing = undefined;
