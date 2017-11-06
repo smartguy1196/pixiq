@@ -1,4 +1,6 @@
 /*
+Current WIP - inconistency bug fix
+
 Rundown: Environement checkpoint
 
 Commentary: Environment support
@@ -56,7 +58,7 @@ WIP - provide a get pixel library
 			"error" : ( error ) => { console.log( error ) },
 			"warn" : ( warn ) => { console.log( warn ) }
 			
-		},
+		}
 		
 		//Label: the "main" definition
 		
@@ -66,7 +68,26 @@ WIP - provide a get pixel library
 	
 			if( new.target ){
 				
-				var source = { "src", "type", "data" }, plot, frame, drawing;
+				var 
+					source = { 
+					
+						"src",
+						"type",
+						"data",
+						
+						/*
+						Label: tempBubble
+						
+						Used later in bubbling, it is stored here encapsulated as a private variable as a temporal toggle.
+						It is used internally only, so it is protected by encapsulation, and it resets everytime the source is modified
+						*/
+						
+						"tempBubble" = false 
+					
+					},
+					plot,
+					frame,
+					drawing;
 				
 				/*
 				Commentary: Skeletal and frugal construction options
@@ -157,7 +178,13 @@ WIP - provide a get pixel library
 	-Using the pipeline factories
 	
 	The PhotoMap Objects themselves inherit from a prototype (define below)
-	The prototype contains public methods for each step in the process of making a PhotoMap, which include:
+	The prototype contains public methods for each step in the process of making a PhotoMap.
+	By default, each of these are to be run separately, unless bubbling is set to true.
+	When bubbling is enabled as true, the next method in the pipeline is immediately invoked.
+	*It is good to take note that the pipeline factories do not have the option to bubble,
+	because they are not attached to a PhotoMap object
+	
+	These prototype methods include:
 	
 	- staging:
 	This process is dedicated to ripping source data off of an image and supplying it to the source property of the PhotoMap object.
@@ -206,10 +233,17 @@ WIP - provide a get pixel library
 		callback = function(){
 			
 			this.plot = new PhotoMap.createPlot( this.source );
+			if( this.source.tempBubble )
+				this.frame = this.drawing = undefined;
+			else
+				this.fulfillDraw( this.fulfillFrame( this.plot ) )
 			
-		}
+		}.bind( this ),
+		bubble = false
 	
 	){
+		
+		this.source.tempBubble = bubble;
 		
 		//Label: stage validator
 		
@@ -272,15 +306,21 @@ WIP - provide a get pixel library
 				Once validated to case 1, all of the properties are reset, because a new source is provided
 				
 				WIP - inconistency bug fix could use revision
+				- use callback function to help determine how to handle inconistency for staging/plotting
+				-- reworked:
+				--- stored bubble argument inside of a tempvar encapsulated by the module
+				---- it is only used with the callback function, and it is reset everytime it is used.
+				-----add this to commentary
+
+				- add bubble/inconsistency commentary
+				- add callback - bubble commentary
 				*/
-				
-				this.plot = this.frame = this.drawing = undefined;
 				
 				this.source = PhotoMap.stage(
 				
 					type ? type: this.source.type,
 					source,
-					callback instanceof Function ? callback( this.source ) : undefined
+					callback instanceof Function ? callback : undefined
 				
 				);
 					
@@ -303,7 +343,7 @@ WIP - provide a get pixel library
 	the pipeline control should be done with the callback function used by staging after staging
 	*/
 
-	PhotoMap.prototype.plot = function(){
+	PhotoMap.prototype.getPlot = function(){
 		
 		if( this.plot )
 			return this.plot;
@@ -311,6 +351,7 @@ WIP - provide a get pixel library
 			runtime.warn( "PhotoMap Object Plot WARNING: plot not yet defined, please wait!" );
 			return null;
 		}
+		
 	}
 
 	/*
@@ -335,7 +376,7 @@ WIP - provide a get pixel library
 	because there is nothing to set and nothing to get
 	*/
 	
-	PhotoMap.prototype.frame = function( plot ){
+	PhotoMap.prototype.fulfillFrame = function( plot, bubble ){
 		
 		if( !this.frame && !plot ){ //Rundown: nothing to set and nothing to get? error out...
 			
@@ -354,6 +395,9 @@ WIP - provide a get pixel library
 			this.frame = new PhotoMap.PhotoMapFrame( plot );
 			this.plot = this.frame.plot ? this.frame.plot : undefined;
 			this.source = this.frame.plot.source ? this.frame.plot.source : undefined;
+			
+			if( bubble )
+				this.fulfillDraw( this.frame );
 		
 		}
 		
@@ -361,7 +405,7 @@ WIP - provide a get pixel library
 		
 	}
 	
-	PhotoMap.prototype.draw = function( frame ){
+	PhotoMap.prototype.fulfillDraw = function( frame ){
 		
 		if( !frame && !this.drawing ){
 			
