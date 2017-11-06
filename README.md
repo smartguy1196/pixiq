@@ -1,2 +1,2 @@
 # pixiq
-Data-in-a-pixel service for JavaScript.
+> Data-in-a-pixel service for JavaScript.
