@@ -47,12 +47,12 @@ Object.defineProperties(
 	pixiq,
 	{
 		
-		"extend" : { //Label: pixiq (or library) extender
+		"extend" : { //Label: pixiq library extender
 			
 			/*
 			"writeable" : false,
 			"configurable" : false,
-			"enumerable" : false,
+			"enumerable" : true,
 			*/
 			"value" : function( library ){
 				
