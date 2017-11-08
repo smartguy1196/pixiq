@@ -79,6 +79,8 @@
 	
 				//WIP: make data extractor
 				
+				this.math.plot();
+				
 			}else{
 				
 				runtime.error( "PIXIP: image not valid" );
